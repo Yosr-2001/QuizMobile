@@ -1,8 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:html_unescape/html_unescape.dart';
 import 'package:projet_flutter/pages/finishedQuizpage.dart';
 import '../../../models/category.dart';
 import '../../../models/question.dart';
-
 
 class QuizPage extends StatefulWidget {
   final List<Question> questions;
@@ -17,20 +18,97 @@ class QuizPage extends StatefulWidget {
 
 class _QuizPageState extends State<QuizPage> {
   final TextStyle _questionStyle = TextStyle(
-      fontSize: 24.0, fontWeight: FontWeight.bold, color: Colors.black);
+    fontSize: 24.0,
+    fontWeight: FontWeight.bold,
+    color: Colors.black,
+  );
 
+  final HtmlUnescape unescape = HtmlUnescape();
   int _currentIndex = 0;
   final Map<int, dynamic> _answers = {};
   final GlobalKey<ScaffoldState> _key = GlobalKey<ScaffoldState>();
+  late Timer _timer;
+  int _timeLeft = 15;
+  bool _timeUp = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _startTimer();
+  }
+
+  @override
+  void dispose() {
+    if (_timer.isActive) _timer.cancel();
+    super.dispose();
+  }
+
+  void _startTimer() {
+    _timeLeft = 15;
+    _timeUp = false;
+    _timer = Timer.periodic(Duration(seconds: 1), (timer) {
+      if (_timeLeft > 0) {
+        setState(() {
+          _timeLeft--;
+        });
+      } else {
+        _timer.cancel();
+        setState(() {
+          _timeUp = true;
+        });
+        Future.delayed(Duration(seconds: 1), () {
+          if (_currentIndex < (widget.questions.length - 1)) {
+            _nextQuestion();
+          } else {
+            _submitQuiz();
+          }
+        });
+      }
+    });
+  }
+
+  void _nextQuestion() {
+    if (_timer.isActive) _timer.cancel();
+    setState(() {
+      _currentIndex++;
+    });
+    _startTimer();
+  }
+
+  void _submitQuiz() {
+    if (_timer.isActive) _timer.cancel();
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (_) => FinishedQuizPage(
+          questions: widget.questions,
+          answers: _answers,
+        ),
+      ),
+    );
+  }
+
+
+  Color _getTimerColor() {
+  if (_timeUp) return Colors.red;
+  if (_timeLeft <= 5) return Colors.red;
+  if (_timeLeft <= 10) return Colors.orange;
+  return Colors.blueGrey;
+  }
 
   @override
   Widget build(BuildContext context) {
     Question question = widget.questions[_currentIndex];
-    final List<dynamic> options = question.incorrectAnswers;
-    if (!options.contains(question.correctAnswer)) {
-      options.add(question.correctAnswer);
-      options.shuffle();
+    final List<String> options = List<String>.from(
+      question.incorrectAnswers.map((e) => unescape.convert(e)),
+    );
+
+    final String correctAnswer = unescape.convert(question.correctAnswer);
+    if (!options.contains(correctAnswer)) {
+      options.add(correctAnswer);
+      //options.shuffle(); // mélanger les réponses
     }
+
+    final String decodedQuestion = unescape.convert(question.question);
 
     return Scaffold(
       key: _key,
@@ -39,39 +117,60 @@ class _QuizPageState extends State<QuizPage> {
         automaticallyImplyLeading: false,
         leading: IconButton(
           onPressed: () async {
-            showDialog<bool>(
-                context: context,
-                builder: (_) {
-                  return AlertDialog(
-                    content: Text(
-                        "Are you sure you want to quit the quiz? All your progress will be lost."),
-                    title: Text("Warning!"),
-                    actions: <Widget>[
-                      FloatingActionButton(
-                        child: Text("Yes"),
-                        onPressed: () {
-                          Navigator.pop(context, true);
-                        },
-                      ),
-                      FloatingActionButton(
-                        child: Text("No"),
-                        onPressed: () {
-                          Navigator.pop(context, false);
-                        },
-                      ),
-                    ],
-                  );
-                });
+            final shouldQuit = await showDialog<bool>(
+              context: context,
+              builder: (_) {
+                return AlertDialog(
+                  title: Text("Warning!"),
+                  content: Text(
+                      "Are you sure you want to quit the quiz? All your progress will be lost."),
+                  actions: <Widget>[
+                    TextButton(
+                      child: Text("Yes"),
+                      onPressed: () {
+                        if (_timer.isActive) _timer.cancel();
+                        Navigator.pop(context, true);
+                      },
+                    ),
+                    TextButton(
+                      child: Text("No"),
+                      onPressed: () => Navigator.pop(context, false),
+                    ),
+                  ],
+                );
+              },
+            );
+
+            if (shouldQuit == true) {
+              Navigator.of(context).pop();
+            }
           },
-          icon: Icon(
-            Icons.arrow_back_outlined,
-          ),
+          icon: Icon(Icons.arrow_back_outlined),
         ),
         iconTheme: IconThemeData(color: Colors.black),
         backgroundColor: Colors.transparent,
-        title:
-        Text(widget.category.name, style: TextStyle(color: Colors.black)),
         elevation: 0,
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(widget.category.name, style: TextStyle(color: Colors.black)),
+            Container(
+              padding: EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: _getTimerColor(),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                '$_timeLeft',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -98,39 +197,52 @@ class _QuizPageState extends State<QuizPage> {
                             ),
                             SizedBox(width: 16.0),
                             Expanded(
-                              child: Text(
-                                  widget.questions[_currentIndex].question),
-
+                              child: Text(decodedQuestion),
                             ),
                           ],
                         ),
                         SizedBox(height: 20.0),
-                        Container(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: <Widget>[
-                              ...options.map((option) => Padding(
+                        if (_timeUp)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 16.0),
+                            child: Text(
+                              "Time's up!",
+                              style: TextStyle(
+                                color: Colors.red,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                              ),
+                            ),
+                          ),
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            ...options.map(
+                                  (option) => Padding(
                                 padding: const EdgeInsets.all(8.0),
                                 child: Container(
                                   decoration: BoxDecoration(
-                                      color: Colors.grey[200],
-                                      borderRadius:
-                                      BorderRadius.circular(10)),
+                                    color: _timeUp
+                                        ? Colors.grey[300]
+                                        : Colors.grey[200],
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
                                   child: RadioListTile(
-                                    title: Text("$option"
-                                        ),
+                                    title: Text(option),
                                     groupValue: _answers[_currentIndex],
                                     value: option,
-                                    onChanged: (value) {
+                                    onChanged: _timeUp
+                                        ? null
+                                        : (value) {
                                       setState(() {
                                         _answers[_currentIndex] = option;
                                       });
                                     },
                                   ),
                                 ),
-                              )),
-                            ],
-                          ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -149,17 +261,22 @@ class _QuizPageState extends State<QuizPage> {
               ),
               minWidth: MediaQuery.of(context).size.width,
               child: ElevatedButton(
-
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _timeUp ? Colors.grey : Colors.blueGrey, // Change ici la couleur
+                  fixedSize: Size(100, 50),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20.0),
+                  ),
+                ),
                 child: Text(
                   _currentIndex == (widget.questions.length - 1)
                       ? "Submit"
                       : "Next",
-                  style: MediaQuery.of(context).size.width > 800
-                      ? TextStyle(fontSize: 30.0)
-                      : TextStyle(color: Colors.white),
+                  style: TextStyle(color: Colors.white),
                 ),
-                onPressed: _nextSubmit,
+                onPressed: _timeUp ? null : _nextSubmit, // désactiver quand le temps est écoulé
               ),
+
             ),
           )
         ],
@@ -172,18 +289,12 @@ class _QuizPageState extends State<QuizPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("You must select an answer to continue.")),
       );
-
       return;
     }
     if (_currentIndex < (widget.questions.length - 1)) {
-      setState(() {
-        _currentIndex++;
-      });
+      _nextQuestion();
     } else {
-      Navigator.of(context).pushReplacement(MaterialPageRoute(
-          builder: (_) => FinishedQuizPage(
-              questions: widget.questions, answers: _answers)));
+      _submitQuiz();
     }
   }
 }
-
