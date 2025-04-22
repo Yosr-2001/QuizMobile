@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:html_unescape/html_unescape.dart';
+
 import 'package:projet_flutter/pages/finishedQuizpage.dart';
+import 'package:projet_flutter/pages/review_page.dart';
 import '../../../models/category.dart';
 import '../../../models/question.dart';
 
@@ -79,20 +81,29 @@ class _QuizPageState extends State<QuizPage> {
     if (_timer.isActive) _timer.cancel();
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
-        builder: (_) => FinishedQuizPage(
+        builder: (_) => ReviewPage(
           questions: widget.questions,
           answers: _answers,
+          onReviewFinished: () {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(
+                builder: (_) => FinishedQuizPage(
+                  questions: widget.questions,
+                  answers: _answers,
+                ),
+              ),
+            );
+          },
         ),
       ),
     );
   }
 
-
   Color _getTimerColor() {
-  if (_timeUp) return Colors.red;
-  if (_timeLeft <= 5) return Colors.red;
-  if (_timeLeft <= 10) return Colors.orange;
-  return Colors.blueGrey;
+    if (_timeUp) return Colors.red;
+    if (_timeLeft <= 5) return Colors.red;
+    if (_timeLeft <= 10) return Colors.orange;
+    return Color(0xFF789D88);
   }
 
   @override
@@ -262,7 +273,7 @@ class _QuizPageState extends State<QuizPage> {
               minWidth: MediaQuery.of(context).size.width,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _timeUp ? Colors.grey : Colors.blueGrey, // Change ici la couleur
+                  backgroundColor: _timeUp ? Color(0xFF789D88) : Color(0xFF789D88),
                   fixedSize: Size(100, 50),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20.0),
@@ -274,9 +285,8 @@ class _QuizPageState extends State<QuizPage> {
                       : "Next",
                   style: TextStyle(color: Colors.white),
                 ),
-                onPressed: _timeUp ? null : _nextSubmit, // désactiver quand le temps est écoulé
+                onPressed: _timeUp ? null : _nextSubmit,
               ),
-
             ),
           )
         ],

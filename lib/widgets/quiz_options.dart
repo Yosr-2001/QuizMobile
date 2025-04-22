@@ -55,7 +55,7 @@ class _QuizOptionsDialogState extends State<QuizOptionsDialog> {
                     ),
               ),
               const SizedBox(height: 30.0),
-              _buildSectionTitle("Nombre de questions", textColor),
+              _buildSectionTitle("Number of questions", textColor),
               _buildChips(
                 [10, 20, 30, 40, 50],
                 _noOfQuestions,
@@ -64,14 +64,14 @@ class _QuizOptionsDialogState extends State<QuizOptionsDialog> {
                 backgroundColor1,
               ),
               const SizedBox(height: 25.0),
-              _buildSectionTitle("Difficulté", textColor),
+              _buildSectionTitle("Difficulty", textColor),
               _buildChips(
                 ["null", "easy", "medium", "hard"],
                 _difficulty,
                 (val) => _selectDifficulty(val),
                 primaryColor,
                 backgroundColor2,
-                labels: ["Tous", "Facile", "Moyen", "Difficile"],
+                labels: ["All", "Easy", "Medium", "Hard"],
               ),
               const SizedBox(height: 40.0),
               processing
@@ -88,7 +88,7 @@ class _QuizOptionsDialogState extends State<QuizOptionsDialog> {
                 onPressed: _startQuiz,
                 icon: const Icon(Icons.play_arrow, color: Colors.white), // ← 👈 Icône ajoutée ici
                 label: const Text(
-                  "Commencer",
+                  "Start",
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,

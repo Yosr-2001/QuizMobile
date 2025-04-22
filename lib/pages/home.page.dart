@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:projet_flutter/models/category.dart';
 import 'package:projet_flutter/widgets/quiz_options.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class HomePage extends StatelessWidget {
   final List<Color> tileColors = [
@@ -30,8 +31,85 @@ class HomePage extends StatelessWidget {
     return Scaffold(
       backgroundColor: Color(0xFFF9F9F9),
       drawer: Drawer(
-
-      ),
+    child: ListView(
+    padding: EdgeInsets.zero,
+    children: [
+    SizedBox(
+    height: 100, // Hauteur réduite du DrawerHeader
+    child: DrawerHeader(
+    decoration: const BoxDecoration(
+    color: Color(0xFF3A6351),
+    ),
+    child: Text(
+    'Menu',
+    style: TextStyle(
+    color: Colors.white,
+    fontSize: 24,
+    ),
+    ),
+    ),
+    ),
+    ListTile(
+    leading: const Icon(Icons.home),
+    title: const Text('Home'),
+    onTap: () {
+    Navigator.pop(context);
+    // Ajoutez ici votre navigation vers l'accueil
+    },
+    ),
+    ListTile(
+    leading: const Icon(Icons.settings),
+    title: const Text('Paramètres'),
+    onTap: () {
+    Navigator.pop(context);
+    // Ajoutez ici votre navigation vers les paramètres
+    },
+    ),
+    const Divider(),
+    ListTile(
+    leading: const Icon(Icons.info),
+    title: const Text('À propos'),
+    onTap: () {
+    Navigator.pop(context);
+    showAboutDialog(
+    context: context,
+    applicationName: 'Quiz App',
+    applicationVersion: '1.0.0',
+    applicationIcon: const Icon(Icons.quiz, size: 40),
+    applicationLegalese: '© 2023 Quiz App Company',
+    children: [
+    const SizedBox(height: 16),
+    const Text('Cette application utilise l\'API OpenTDB (Open Trivia Database)'),
+    const SizedBox(height: 8),
+    const Text(
+    'OpenTDB',
+    style: TextStyle(fontWeight: FontWeight.bold),
+    ),
+    const Text('Une base de données de questions de trivia gratuite et ouverte'),
+    const SizedBox(height: 8),
+    const Text('Caractéristiques:'),
+    const Text('- Plus de 4,000 questions'),
+    const Text('- Multiples catégories'),
+    const Text('- Différents niveaux de difficulté'),
+    const Text('- Support multilingue'),
+    const SizedBox(height: 16),
+    InkWell(
+    onTap: _launchOpenTDB,
+    child: const Text(
+    'Visitez opentdb.com',
+    style: TextStyle(
+    color: Colors.blue,
+    decoration: TextDecoration.underline,
+    ),
+    ),
+    ),
+    ],
+    );
+    },
+    ),
+    ],
+    ),
+    ),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -156,4 +234,28 @@ class HomePage extends StatelessWidget {
       ),
     );
   }
+
+  Future<void> _launchOpenTDB() async {
+    const url = 'https://opentdb.com';
+
+    try {
+
+      if (await canLaunchUrl(Uri.parse(url))) {
+
+        await launchUrl(
+          Uri.parse(url),
+          mode: LaunchMode.externalApplication,
+        );
+      } else {
+
+        throw 'Impossible d\'ouvrir $url';
+      }
+    } catch (e) {
+      debugPrint('Erreur lors de l\'ouverture de l\'URL: $e');
+
+
+    }
+  }
+
+
 }
